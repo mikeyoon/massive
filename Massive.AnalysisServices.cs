@@ -30,8 +30,20 @@ namespace Massive
         /// </summary>
         public static void AddParam(this AdomdCommand cmd, object item)
         {
-            var p = cmd.CreateParameter();
-            p.ParameterName = string.Format("@{0}", cmd.Parameters.Count);
+
+            if (cmd.Parameters.Count == 0)
+            {
+                var matches = Regex.Matches(cmd.CommandText, "\\@[a-zA-Z][a-zA-Z0-9]*", RegexOptions.Compiled);
+                foreach (Match match in matches)
+                {
+                    var newParam = cmd.CreateParameter();
+                    newParam.ParameterName = match.Value.Substring(1);
+                    cmd.Parameters.Add(newParam);
+                }
+            }
+
+            var p = cmd.Parameters.Cast<AdomdParameter>().First(q => q.Value == null);
+
             if (item == null)
             {
                 p.Value = DBNull.Value;
@@ -53,10 +65,9 @@ namespace Massive
                 {
                     p.Value = item;
                 }
-                if (item.GetType() == typeof(string))
-                    p.Size = ((string)item).Length > 4000 ? -1 : 4000;
+                //if (item.GetType() == typeof(string))
+                //    p.Size = ((string)item).Length > 4000 ? -1 : 4000;
             }
-            cmd.Parameters.Add(p);
         }
         /// <summary>
         /// Turns an IDataReader to a Dynamic list of things
